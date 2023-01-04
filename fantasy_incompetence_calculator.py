@@ -21,24 +21,6 @@ def init_caps():
     caps['acceptSslCerts'] = True
     return caps
 
-def gather_team_scores():
-    accumulated_score = []
-
-    for x in range(1, 13):
-        team_url = "https://fantasy.nfl.com/league/2535774/team/{}".format(x)
-        driver.get(team_url)
-        current_url = driver.current_url
-
-        time.sleep(1)
-        if team_url == current_url:
-            time.sleep(1)
-
-            element = driver.find_element(
-                By.XPATH, "//div[contains(@class, 'teamTotal teamId-{}')]".format(x))
-            accumulated_score.append(element.text)
-    print(accumulated_score)
-    return accumulated_score
-
 def __gather_team_scores():
     accumulated_score = []
 
@@ -69,7 +51,7 @@ driver.get(url)
 username = "batman313rd@gmail.com"
 p_word_not_pussy = "oracle212rd"
 
-time.sleep(2)
+time.sleep(1)
 
 driver.find_element(
     By.XPATH, '//*[@id="__next"]/div/div/div[2]/div[4]/div/div[2]/input').send_keys(username)
@@ -79,9 +61,5 @@ driver.find_element(
     By.XPATH, '//*[@id="__next"]/div/div/div[2]/div[6]/div/div/div').click()
 
 time.sleep(1)
-time.sleep(1)
 
-# driver.get("https://fantasy.nfl.com/league/2535774/team/1")
-
-# gather_team_scores()
 __gather_team_scores()
