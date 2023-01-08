@@ -1,8 +1,16 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException
 import time
 import pandas as pd
 import argparse
+import json
+
+with open('./pwd_1.json') as json_file:
+    # Load the JSON data from the file
+    data = json.load(json_file)
 
 parser = argparse.ArgumentParser(
     description='Accepts teams to collect score values.')
@@ -28,8 +36,8 @@ def __gather_team_scores():
     accumulated_score = []
     # df = pd.DataFrame(columns=['Team Number', 'Scores'])
 
+    time.sleep(20)
     for week in range(1, 15):
-        # accumulated_score = []
         for i, value in enumerate(args.team_number):
             print('LOG: ' + str(i))
             team_id = value
@@ -38,12 +46,25 @@ def __gather_team_scores():
                 team_id, week)
             driver.get(team_url)
             current_url = driver.current_url
+            print("Team URL:", team_url)
+            print("Current URL:", current_url)
             time.sleep(5)
-            if team_url == current_url:
-                time.sleep(5)
-                element = driver.find_element(
-                    By.XPATH, "//div[contains(@class, 'teamTotal teamId-{}')]".format(team_id))
-                accumulated_score.append(element.text)
+            try:
+                element = WebDriverWait(driver, 10).until(
+                    EC.url_to_be(team_url)
+                )
+                if team_url == current_url:
+                    time.sleep(5)
+                    try:
+                        element = WebDriverWait(driver, 10).until(
+                            EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'teamTotal teamId-{}')]".format(team_id))))
+                        print("URL:", team_url)
+                        print("Element:", element.text)
+                        accumulated_score.append(element.text)
+                    except TimeoutException:
+                        print("Element not found for URL:", team_url)
+            except TimeoutException:
+                        print("Team URL is not the same:", team_url)
         print(accumulated_score)
         # df.loc[len(df)] = accumulated_score
         # print(df)
@@ -65,26 +86,25 @@ def create_csv(score):
 
 
 url = "https://id.nfl.com/account/sign-in"
-driver = webdriver.Chrome("./chromedriver/chromedriver",
-                          chrome_options=init_options(), desired_capabilities=init_caps())
+# driver = webdriver.Chrome("./chromedriver/chromedriver",
+#                           chrome_options=init_options(), desired_capabilities=init_caps())
+driver = webdriver.Chrome("../chromedriver/chromedriver",
+                          chrome_options=init_options(), desired_capabilities=init_caps())  # Mac Driver
 
 driver.implicitly_wait(10)
 
 driver.get(url)
 
-username = "batman313rd@gmail.com"
-p_word_not_pussy = "oracle212rd"
+username = data['username']
+password = data['password']
 
 time.sleep(1)
 
 driver.find_element(
     By.XPATH, '//*[@id="__next"]/div/div/div[2]/div[4]/div/div[2]/input').send_keys(username)
 driver.find_element(
-    By.XPATH, '//*[@id="__next"]/div/div/div[2]/div[5]/div[1]/div[2]/input').send_keys(p_word_not_pussy)
+    By.XPATH, '//*[@id="__next"]/div/div/div[2]/div[5]/div[1]/div[2]/input').send_keys(password)
 driver.find_element(
     By.XPATH, '//*[@id="__next"]/div/div/div[2]/div[6]/div/div/div').click()
-
-time.sleep(10)
-driver.implicitly_wait(10)
 
 __gather_team_scores()
