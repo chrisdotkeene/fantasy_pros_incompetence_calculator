@@ -4,12 +4,12 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException
 import time
+import csv
 import pandas as pd
 import argparse
 import json
 
 with open('./pwd_1.json') as json_file:
-    # Load the JSON data from the file
     data = json.load(json_file)
 
 parser = argparse.ArgumentParser(
@@ -33,59 +33,56 @@ def init_caps():
 
 
 def __gather_team_scores():
-    accumulated_score = []
-    # df = pd.DataFrame(columns=['Team Number', 'Scores'])
+    time.sleep(10)
+    with open('incompetence_score.csv', mode='w') as incompetence_score:
+        incompetence_writer = csv.writer(incompetence_score, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        team_header = []
+        for week in range(1, 15):
+            accumulated_score = []
+            last_item = len(args.team_number)-1
+            for i, value in enumerate(args.team_number):
+                team_id = value
+                if week == 1:
+                    print('setting column names ...')
+                    team_header.append(team_id)
+                    if i == last_item:
+                        incompetence_writer.writerow(team_header)
+                        print('Header complete')
+                team_url = "https://fantasy.nfl.com/league/2535774/team/{}/gamecenter?week={}".format(
+                    team_id, week)
+                driver.get(team_url)
+                current_url = driver.current_url
+                print("Team URL:", team_url)
+                print("Current URL:", current_url)
+                time.sleep(2)
+                try:
+                    element = WebDriverWait(driver, 20).until(
+                        EC.url_to_be(team_url)
+                    )
+                    if team_url == current_url:
+                        try:
+                            element = WebDriverWait(driver, 20).until(
+                                EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'teamTotal teamId-{}')]".format(team_id))))
+                            print("URL:", team_url)
+                            print("Element:", element.text)
+                            accumulated_score.append(element.text)
+                        except TimeoutException:
+                            print("Element not found for URL:", team_url)
+                except TimeoutException:
+                            print("Team URL is not the same:", team_url)
+            print(accumulated_score)
+            incompetence_writer.writerow(accumulated_score)
+    print('CSV saved.')
 
-    time.sleep(20)
-    for week in range(1, 15):
-        for i, value in enumerate(args.team_number):
-            print('LOG: ' + str(i))
-            team_id = value
-            print('TEAM: ' + str(team_id))
-            team_url = "https://fantasy.nfl.com/league/2535774/team/{}/gamecenter?week={}".format(
-                team_id, week)
-            driver.get(team_url)
-            current_url = driver.current_url
-            print("Team URL:", team_url)
-            print("Current URL:", current_url)
-            time.sleep(5)
-            try:
-                element = WebDriverWait(driver, 10).until(
-                    EC.url_to_be(team_url)
-                )
-                if team_url == current_url:
-                    time.sleep(5)
-                    try:
-                        element = WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.XPATH, "//div[contains(@class, 'teamTotal teamId-{}')]".format(team_id))))
-                        print("URL:", team_url)
-                        print("Element:", element.text)
-                        accumulated_score.append(element.text)
-                    except TimeoutException:
-                        print("Element not found for URL:", team_url)
-            except TimeoutException:
-                        print("Team URL is not the same:", team_url)
-        print(accumulated_score)
-        # df.loc[len(df)] = accumulated_score
-        # print(df)
-    return accumulated_score
 
-
-def create_csv(score):
-    df = pd.DataFrame(columns=['Team Number'])
-    df.loc[len(df)] = score
-    # df['Team Number'] = teams
-    # df['Scores'] = score
-
-    # weekly_scores = {
-    #     'Team Number': teams,
-    #     'Final Score': score
-    # }
-    # df = pd.DataFrame(weekly_scores)
+def read_csv(csv):
+    df = pd.read_csv(csv)
     print(df)
+    print('-- std --')
+    print(df.std())
+    
 
-
-url = "https://id.nfl.com/account/sign-in"
+url = "https://fantasy.nfl.com/league/2535774/team/1/gamecenter?week=1"
 # driver = webdriver.Chrome("./chromedriver/chromedriver",
 #                           chrome_options=init_options(), desired_capabilities=init_caps())
 driver = webdriver.Chrome("../chromedriver/chromedriver",
@@ -107,4 +104,13 @@ driver.find_element(
 driver.find_element(
     By.XPATH, '//*[@id="__next"]/div/div/div[2]/div[6]/div/div/div').click()
 
+
 __gather_team_scores()
+
+print('opening CSV')
+
+time.sleep(5)
+
+print('opening CSV ...')
+
+read_csv('incompetence_score.csv')
